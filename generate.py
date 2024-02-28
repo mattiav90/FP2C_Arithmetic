@@ -1,5 +1,7 @@
 
 import random
+import sys
+
 
 
 #  generate a list of random int. 
@@ -33,20 +35,24 @@ def convert_to_2s_complement(random_numbers, num_bits):
 if __name__ == "__main__":
     converted_list = []
 
-    bit_width=8
-    num_samples = 20
-    # generate a list of values
+
+    # Retrieve the command-line arguments
+    bit_width = int(sys.argv[1])
+    num_samples = int(sys.argv[2])
+    file_name = sys.argv[3]
+
+
     list = generate_list(num_samples,bit_width)
     # convert this list into 2 complement
     converted_list = convert_to_2s_complement(list, bit_width)
     for  i in range(len(list)) :
         print("decimal: ",list[i],"converted: ",converted_list[i])
     
-    # Specify the file path
-    file_path = "file.txt"
+    # # Specify the file path
+    # file_name = "file.txt"
 
     # Open the file in write mode
-    with open(file_path, 'w') as file:
+    with open(file_name, 'w') as file:
         # Iterate over the values and write each value to a new line in the file
         for value in converted_list:
             file.write(str(value) + '\n')
