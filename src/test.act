@@ -1,0 +1,63 @@
+
+import sim;
+open sim;
+
+
+export template<pint ID; pbool LOOP; pint W> defproc my_file_source_mod (chan!(int<W>) O ; chan!(int<1>) C  )
+{
+  bool dummy;
+  int<W> temp;
+  chp {
+    *[    
+         temp:=sim::file_read(ID);
+         *[    C!0; 
+               O!temp; temp:=sim::file_read(ID) <- ~sim::file_eof (ID)
+          ]; C!1; O!temp; dummy := sim::file_close(ID) <- LOOP
+      ]
+  }
+}
+
+
+
+template<pint width> defproc sink (chan?(int<width>) IN; chan?(int<1>) C ){
+
+int<1> c;
+int<width> in;
+
+chp{
+    
+    C?c; IN?in; log("%breceived val: ",in, "  ",in);
+    *[ c=0 -> C?c; IN?in; log("%breceived val: ",in, "  ",in)
+    ];
+    
+    log("%breceived L val: ",in, "  ",in)
+    
+}
+
+}
+
+
+template<pint width >defproc complement_mult(chan?(int<width>) in1, in2 ; chan!(int<width>) res){
+
+// I have to convert the numbers in binary (2 complement) and after in HEX. 
+
+}
+
+
+pint width=8;
+
+defproc test(){
+
+    my_file_source_mod < 1, false, width > source1;
+    my_file_source_mod < 2, false, width > source2;
+    sink<width> sink1,sink2;
+
+    sink1.IN = source1.O;
+    sink1.C = source1.C;
+
+    sink2.IN = source2.O;
+    sink2.C = source2.C;
+    
+
+
+}
