@@ -2,6 +2,11 @@
 import sim;
 open sim;
 
+import globals;
+
+import sim::file;
+open sim::file;
+
 import math;
 open math;
 
@@ -23,15 +28,17 @@ export template<pint ID; pbool LOOP; pint W> defproc my_file_source_mod (chan!(i
 
 
 
-template<pint width> defproc sink (chan?(int<width>) IN; chan?(int<1>) C ){
+
+
+template<pint width> defproc sink (chan?(int<width>) IN; chan?(int<1>) C; chan!(int<width>) OUT  ){
 
 int<1> c;
 int<width> in;
 
   chp{
       
-      C?c; IN?in; log("%breceived val: ",in, "  ",in);
-      *[ c=0 -> C?c; IN?in; log("%breceived val: ",in, "  ",in)
+      C?c; IN?in; OUT!in; log("%breceived val: ",in, "  ",in);
+      *[ c=0 -> C?c; IN?in; OUT!in;  log("%breceived val: ",in, "  ",in)
       ];
       
       log("%breceived L val: ",in, "  ",in)
@@ -51,13 +58,32 @@ int<width> in;
 
 // }
 
+export template<pint D_WIDTH, VERBOSITY, F_ID, SINK_ID>
+defproc sink_file_mio (chan?(int<D_WIDTH>) I)
+{
+    int<D_WIDTH> buf;
+    bool success;
+    int write_id;
 
+    chp {
+        // if logging is enabled, create the log file
+          write_id := file_private::openw (F_ID);
+          assert (write_id != 0, "Sink ", SINK_ID, " failed to open output file with ID ", F_ID, "!");
 
-template<pint width >defproc complement_mult(chan?(int<width>) in1, in2 ; chan!(int<width>) res){
-
-// I have to convert the numbers in binary (2 complement) and after in HEX. 
-
+        *[
+            I?buf;
+            success := file_private::write_sink (write_id, VERBOSITY, SINK_ID, buf);
+            assert (success, "Sink ", SINK_ID, " failed to write to output file!")
+        ]
+    }
 }
+
+
+// template<pint width >defproc complement_mult(chan?(int<width>) in1, in2 ; chan!(int<width>) res){
+
+// // I have to convert the numbers in binary (2 complement) and after in HEX. 
+
+// }
 
 
 pint width=8;
@@ -68,11 +94,15 @@ defproc test(){
     my_file_source_mod < 2, false, width > source2;
     sink<width> sink1,sink2;
 
+    sink_file_mio<width,0,0,0> file_sink;
+
     sink1.IN = source1.O;
     sink1.C = source1.C;
 
-    sink2.IN = source2.O;
-    sink2.C = source2.C;
+    sink1.OUT = file_sink.I;
+
+    // sink2.IN = source2.O;
+    // sink2.C = source2.C;
     
 
 
