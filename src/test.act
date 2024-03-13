@@ -2,17 +2,21 @@
 import sim;
 open sim;
 
+import math;
+open math;
+
 
 export template<pint ID; pbool LOOP; pint W> defproc my_file_source_mod (chan!(int<W>) O ; chan!(int<1>) C  )
 {
   bool dummy;
   int<W> temp;
   chp {
-    *[    
-         temp:=sim::file_read(ID);
+    *[   
+         temp:=sim::file::openr(ID); 
+         temp:=sim::file::read(ID);
          *[    C!0; 
-               O!temp; temp:=sim::file_read(ID) <- ~sim::file_eof (ID)
-          ]; C!1; O!temp; dummy := sim::file_close(ID) <- LOOP
+               O!temp; temp:=sim::file::read(ID) <- ~sim::file::eof (ID)
+          ]; C!1; O!temp; dummy := sim::file::closer(ID) <- LOOP
       ]
   }
 }
@@ -24,17 +28,29 @@ template<pint width> defproc sink (chan?(int<width>) IN; chan?(int<1>) C ){
 int<1> c;
 int<width> in;
 
-chp{
-    
-    C?c; IN?in; log("%breceived val: ",in, "  ",in);
-    *[ c=0 -> C?c; IN?in; log("%breceived val: ",in, "  ",in)
-    ];
-    
-    log("%breceived L val: ",in, "  ",in)
-    
-}
+  chp{
+      
+      C?c; IN?in; log("%breceived val: ",in, "  ",in);
+      *[ c=0 -> C?c; IN?in; log("%breceived val: ",in, "  ",in)
+      ];
+      
+      log("%breceived L val: ",in, "  ",in)
+      
+  }
 
 }
+
+// template<pint width> defproc mult ( chan?(int<width>) in1,in2; chan!(int<width>) out ){
+
+// // here you can multiply the values. 
+// // would be nice if you can plot what they are also here. 
+// // to verify correctness
+
+//   fxp.mults()
+
+
+// }
+
 
 
 template<pint width >defproc complement_mult(chan?(int<width>) in1, in2 ; chan!(int<width>) res){
