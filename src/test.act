@@ -10,18 +10,44 @@ open sim::file;
 import math;
 open math;
 
+import math::fxp;
+open math::fxp;
+
 
 export template<pint ID; pbool LOOP; pint W> defproc my_file_source_mod (chan!(int<W>) O ; chan!(int<1>) C  )
 {
   bool dummy;
   int<W> temp;
+
+  int reader_id;
+
   chp {
+      reader_id:=sim::file::openr(ID); 
     *[   
-         temp:=sim::file::openr(ID); 
-         temp:=sim::file::read(ID);
+         temp:=sim::file::read(reader_id);
          *[    C!0; 
-               O!temp; temp:=sim::file::read(ID) <- ~sim::file::eof (ID)
-          ]; C!1; O!temp; dummy := sim::file::closer(ID) <- LOOP
+               O!temp; temp:=sim::file::read(reader_id) <- ~sim::file::eof (reader_id)
+          ]; C!1; O!temp; dummy := sim::file::closer(reader_id) <- LOOP
+      ]
+  }
+}
+
+
+
+export template<pint ID; pbool LOOP; pint W> defproc source_noC (chan!(int<W>) O   )
+{
+  bool dummy;
+  int<W> temp;
+
+  int reader_id;
+
+  chp {
+      reader_id:=sim::file::openr(ID); 
+    *[   
+         temp:=sim::file::read(reader_id);
+         *[    
+               O!temp; temp:=sim::file::read(reader_id) <- ~sim::file::eof (reader_id)
+          ]; O!temp; dummy := sim::file::closer(reader_id) <- LOOP
       ]
   }
 }
@@ -30,18 +56,18 @@ export template<pint ID; pbool LOOP; pint W> defproc my_file_source_mod (chan!(i
 
 
 
-template<pint width> defproc sink (chan?(int<width>) IN; chan?(int<1>) C; chan!(int<width>) OUT  ){
+
+template<pint width> defproc sink (chan?(int<width>) IN; chan?(int<1>) C  ){
 
 int<1> c;
 int<width> in;
 
   chp{
       
-      C?c; IN?in; OUT!in; log("%breceived val: ",in, "  ",in);
-      *[ c=0 -> C?c; IN?in; OUT!in;  log("%breceived val: ",in, "  ",in)
-      ];
+      C?c; IN?in; log("%breceived val: ",in, "  ",in);
+      *[ c=0 -> C?c; IN?in;  log("%breceived val: ",in, "  ",in, " c: ",c)
+      ]
       
-      log("%breceived L val: ",in, "  ",in)
       
   }
 
@@ -79,31 +105,86 @@ defproc sink_file_mio (chan?(int<D_WIDTH>) I)
 }
 
 
-// template<pint width >defproc complement_mult(chan?(int<width>) in1, in2 ; chan!(int<width>) res){
+  template<pint W> function mults (int<W> x, y) : int<W*2>
+  {
+    bool sx, sy; 
+    chp {
+      [ x{W-1} = 1 -> sx+; x := ~x + 1 [] else -> sx- ];
+      [ y{W-1} = 1 -> sy+; y := ~y + 1 [] else -> sy- ];
+          self := (x * y);
+      [ sx != sy -> self := ~self + 1 [] else -> skip ]
+    }
+  }
 
-// // I have to convert the numbers in binary (2 complement) and after in HEX. 
 
-// }
+
+template<pint width >defproc complement_mult(chan?(int<width>) IN1,IN2 ; chan!(int<width>) res){
+
+  int<width> in1,in2,in1b,in2b;
+  int<width*2> out;
+  
+  int c;
+  int<1> c1,c2;
+
+
+  chp{
+    *[
+        IN1?in1;IN2?in2; 
+        log(c,"%b) binary in1: ",in1,"%b in2: ",in2);
+        c1:=in1{width-1}; c2:=in2{width-1};
+
+        [  c1=1 -> in1b := ~in1+1; log("          in1: -",in1b)
+        [] else -> log("          in1:",in1)
+        ];
+
+        [  c2=1 -> in2b := ~in2+1; log("                         in2: -",in2b)
+        [] else -> log("                          in2:",in2)
+        ];
+
+        out := mults<width> (in1,in2);
+
+        [  out{(width*2)-1}=1 -> log(c,"%b) result bin: ",~out+1," result: -",~out+1)
+        [] else -> log(c,"%b) result bin: ",out," result: ",out)   
+        ];
+        
+        c:=c+1
+
+
+    ]
+  }
+
+}
+
+
+
 
 
 pint width=8;
 
 defproc test(){
 
-    my_file_source_mod < 1, false, width > source1;
-    my_file_source_mod < 2, false, width > source2;
+    source_noC < 1, false, width > source1;
+    source_noC < 2, false, width > source2;
     sink<width> sink1,sink2;
 
-    sink_file_mio<width,0,0,0> file_sink;
 
-    sink1.IN = source1.O;
-    sink1.C = source1.C;
 
-    sink1.OUT = file_sink.I;
+    complement_mult<width> CM; 
 
-    // sink2.IN = source2.O;
-    // sink2.C = source2.C;
+    // sink_file_mio<width,0,3,3> file_sink1;
+    // sink_file_mio<width,0,4,4> file_sink2;
+
+    CM.IN1 = source1.O;
+
+
+
+    // sink1.OUT = file_sink1.I;
+
+    CM.IN2 = source2.O;
+
     
+    // sink2.OUT = file_sink2.I;
+
 
 
 }
