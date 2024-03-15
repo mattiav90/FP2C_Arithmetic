@@ -118,10 +118,14 @@ defproc sink_file_mio (chan?(int<D_WIDTH>) I)
 
 
 
-template<pint width >defproc complement_mult(chan?(int<width>) IN1,IN2 ; chan!(int<width>) res){
+template<pint width,width_sum >defproc complement_mult(chan?(int<width>) IN1,IN2 ; chan!(int<width>) res){
 
-  int<width> in1,in2,in1b,in2b;
+  int<width> in1, in2, in1b, in2b;
   int<width*2> out;
+
+  int<width_sum> sum;
+
+  int<width_sum> s1,s2;
   
   int c;
   int<1> c1,c2;
@@ -130,6 +134,7 @@ template<pint width >defproc complement_mult(chan?(int<width>) IN1,IN2 ; chan!(i
   chp{
     *[
         IN1?in1;IN2?in2; 
+        log("----------");
         log(c,"%b) binary in1: ",in1,"%b in2: ",in2);
         c1:=in1{width-1}; c2:=in2{width-1};
 
@@ -146,6 +151,21 @@ template<pint width >defproc complement_mult(chan?(int<width>) IN1,IN2 ; chan!(i
         [  out{(width*2)-1}=1 -> log(c,"%b) result bin: ",~out+1," result: -",~out+1)
         [] else -> log(c,"%b) result bin: ",out," result: ",out)   
         ];
+
+
+        s1 := math::sign_extend<width,width_sum> (in1);
+        s2 := math::sign_extend<width,width_sum> (in2);
+        
+        log("%bin1: ",in1,"%b s1: ",s1);
+        log("%bin2: ",in2,"%b s2: ",s2);
+
+        sum:=s1+s2;
+
+        [  sum{width_sum-1} =1 -> log("sum: -",~sum+1)
+        [] else -> log("sum: ",sum)
+        ];
+      
+
         
         c:=c+1
 
@@ -160,6 +180,8 @@ template<pint width >defproc complement_mult(chan?(int<width>) IN1,IN2 ; chan!(i
 
 
 pint width=8;
+pint width_sum=25;
+
 
 defproc test(){
 
@@ -169,7 +191,7 @@ defproc test(){
 
 
 
-    complement_mult<width> CM; 
+    complement_mult<width,width_sum> CM; 
 
     // sink_file_mio<width,0,3,3> file_sink1;
     // sink_file_mio<width,0,4,4> file_sink2;
